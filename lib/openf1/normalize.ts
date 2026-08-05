@@ -3,6 +3,8 @@ import type {
   OpenF1Driver,
   OpenF1Lap,
   OpenF1Location,
+  OpenF1PitStop,
+  OpenF1Position,
   OpenF1Session,
 } from "./types";
 import type {
@@ -10,6 +12,8 @@ import type {
   Driver,
   Lap,
   LocationFrame,
+  PitStop,
+  PositionEntry,
   Session,
 } from "@/lib/domain/types";
 
@@ -87,5 +91,28 @@ export function normalizeLap(raw: OpenF1Lap, sessionEpochMs: number): Lap {
     sector3Ms:
       raw.duration_sector_3 !== null ? raw.duration_sector_3 * 1000 : null,
     isPitOutLap: raw.is_pit_out_lap,
+  };
+}
+
+export function normalizePosition(
+  raw: OpenF1Position,
+  sessionEpochMs: number
+): PositionEntry {
+  return {
+    driverNumber: raw.driver_number,
+    tOffsetMs: toOffsetMs(raw.date, sessionEpochMs),
+    position: raw.position,
+  };
+}
+
+export function normalizePitStop(
+  raw: OpenF1PitStop,
+  sessionEpochMs: number
+): PitStop {
+  return {
+    driverNumber: raw.driver_number,
+    lapNumber: raw.lap_number,
+    startOffsetMs: toOffsetMs(raw.date, sessionEpochMs),
+    pitDurationMs: raw.pit_duration !== null ? raw.pit_duration * 1000 : null,
   };
 }

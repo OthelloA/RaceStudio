@@ -65,3 +65,21 @@ export interface OpenF1Lap {
   duration_sector_3: number | null;
   is_pit_out_lap: boolean;
 }
+
+export interface OpenF1Position {
+  date: string;
+  session_key: number;
+  meeting_key: number;
+  driver_number: number;
+  position: number;
+}
+
+export interface OpenF1PitStop {
+  date: string;
+  session_key: number;
+  meeting_key: number;
+  driver_number: number;
+  lap_number: number;
+  pit_duration: number | null;
+  lane_duration: number | null;
+}

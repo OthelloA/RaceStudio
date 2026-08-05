@@ -11,19 +11,36 @@ function buildQueryString(params: QueryParams): string {
   return query ? `?${query}` : "";
 }
 
+const MAX_RETRIES = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function fetchOpenF1<T>(
   path: string,
   params: QueryParams = {}
 ): Promise<T> {
   const url = `${BASE_URL}${path}${buildQueryString(params)}`;
-  const res = await fetch(url, {
-    // Historical OpenF1 data never changes once a session has ended.
-    cache: "force-cache",
-  });
 
-  if (!res.ok) {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url, {
+      // Historical OpenF1 data never changes once a session has ended.
+      cache: "force-cache",
+    });
+
+    if (res.ok) return res.json() as Promise<T>;
+
+    // Views with many drivers fire several of these route handlers at once
+    // (e.g. one per row in the sidebar), which can trip OpenF1's rate limit.
+    // Back off and retry rather than surfacing a 429 to the whole panel.
+    if (res.status === 429 && attempt < MAX_RETRIES) {
+      await sleep(2 ** attempt * 500);
+      continue;
+    }
+
     throw new Error(`OpenF1 request failed (${res.status}): ${url}`);
   }
 
-  return res.json() as Promise<T>;
+  throw new Error(`OpenF1 request failed after retries: ${url}`);
 }

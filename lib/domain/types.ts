@@ -49,3 +49,16 @@ export interface Lap {
   sector3Ms: number | null;
   isPitOutLap: boolean;
 }
+
+export interface PositionEntry {
+  driverNumber: number;
+  tOffsetMs: number;
+  position: number;
+}
+
+export interface PitStop {
+  driverNumber: number;
+  lapNumber: number;
+  startOffsetMs: number;
+  pitDurationMs: number | null;
+}
