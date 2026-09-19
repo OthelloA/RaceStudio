@@ -3,10 +3,17 @@
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { Driver, LocationFrame } from "@/lib/domain/types";
+import { getDriverColor } from "@/lib/domain/driverColors";
 import { usePlaybackStore } from "@/stores/playbackStore";
 import { sampleSeries } from "@/lib/time/sessionClock";
 
 const POSITION_FIELDS: Array<keyof LocationFrame> = ["x", "y"];
+
+interface ViewTransform {
+  x: number;
+  y: number;
+  k: number;
+}
 
 interface CarLayerEntry {
   driver: Driver;
@@ -32,7 +39,7 @@ export function CarLayer({
   yScale: d3.ScaleLinear<number, number>;
   width: number;
   height: number;
-  transform: d3.ZoomTransform;
+  transform: ViewTransform;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -77,18 +84,44 @@ export function CarLayer({
         // than growing with the zoom level (the ctx itself is scaled by k).
         const radius = (isFocused ? 7 : 4) / k;
 
+        ctx.globalAlpha = isFocused ? 1 : 0.42;
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.fillStyle = `#${driver.teamColor}`;
+        ctx.fillStyle = getDriverColor(driver);
         ctx.fill();
-        ctx.lineWidth = (isFocused ? 1.5 : 1) / k;
+        ctx.lineWidth = (isFocused ? 2 : 1) / k;
         ctx.strokeStyle = "white";
         ctx.stroke();
+        ctx.globalAlpha = 1;
 
-        ctx.font = `${isFocused ? "700" : "400"} ${(isFocused ? 10 : 7) / k}px sans-serif`;
-        ctx.fillStyle = isFocused ? "#18181b" : "#71717a";
-        ctx.textBaseline = "middle";
-        ctx.fillText(driver.nameAcronym, cx + radius + 2 / k, cy);
+        if (isFocused) {
+          const fontSize = 10 / k;
+          const labelX = cx + radius + 4 / k;
+          const labelY = cy;
+          ctx.font = `700 ${fontSize}px sans-serif`;
+          ctx.textBaseline = "middle";
+          const textWidth = ctx.measureText(driver.nameAcronym).width;
+          const paddingX = 4 / k;
+          const paddingY = 2 / k;
+          const labelHeight = fontSize + paddingY * 2;
+
+          ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+          ctx.strokeStyle = "rgba(24, 24, 27, 0.18)";
+          ctx.lineWidth = 1 / k;
+          ctx.beginPath();
+          ctx.roundRect(
+            labelX - paddingX,
+            labelY - labelHeight / 2,
+            textWidth + paddingX * 2,
+            labelHeight,
+            4 / k
+          );
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "#18181b";
+          ctx.fillText(driver.nameAcronym, labelX, labelY);
+        }
       }
 
       ctx.restore();

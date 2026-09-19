@@ -62,3 +62,18 @@ export interface PitStop {
   startOffsetMs: number;
   pitDurationMs: number | null;
 }
+
+export interface TeamRadioMessage {
+  driverNumber: number;
+  startOffsetMs: number;
+  recordingUrl: string;
+}
+
+export interface Stint {
+  driverNumber: number;
+  stintNumber: number;
+  lapStart: number;
+  lapEnd: number | null;
+  compound: string;
+  tyreAgeAtStart: number | null;
+}

@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+const MAX_FOCUSED_DRIVERS = 2;
+
 interface PlaybackState {
   sessionKey: number | null;
   /** Bounds of actual recorded telemetry (tOffsetMs), not the official session window — OpenF1 data often starts before and ends before the official start/end. */
@@ -52,13 +54,19 @@ export const usePlaybackStore = create<PlaybackState>((set, get) => ({
   },
 
   setSpeed: (multiplier) => set({ playbackSpeed: multiplier }),
-  setActiveDrivers: (numbers) => set({ activeDriverNumbers: numbers }),
+  setActiveDrivers: (numbers) =>
+    set({ activeDriverNumbers: numbers.slice(0, MAX_FOCUSED_DRIVERS) }),
   toggleActiveDriver: (number) => {
     const { activeDriverNumbers } = get();
+    if (activeDriverNumbers.includes(number)) {
+      set({ activeDriverNumbers: activeDriverNumbers.filter((n) => n !== number) });
+      return;
+    }
+
     set({
-      activeDriverNumbers: activeDriverNumbers.includes(number)
-        ? activeDriverNumbers.filter((n) => n !== number)
-        : [...activeDriverNumbers, number],
+      // Keep selection order meaningful: selecting a third driver replaces the
+      // oldest focus target rather than letting comparison views become noise.
+      activeDriverNumbers: [...activeDriverNumbers, number].slice(-MAX_FOCUSED_DRIVERS),
     });
   },
 

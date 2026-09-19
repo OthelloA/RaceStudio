@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Driver } from "@/lib/domain/types";
+import { getDriverColor } from "@/lib/domain/driverColors";
 import { usePlaybackStore } from "@/stores/playbackStore";
 import { usePlaybackFrame } from "@/hooks/usePlaybackFrame";
 import { useCarData } from "@/hooks/useCarData";
@@ -37,7 +38,7 @@ export function DriverPanel({
       <div className="flex items-center gap-2">
         <span
           className="h-3 w-3 rounded-full"
-          style={{ backgroundColor: `#${driver.teamColor}` }}
+          style={{ backgroundColor: getDriverColor(driver) }}
         />
         <span className="font-medium">{driver.fullName}</span>
         <span className="text-sm text-zinc-500">#{driver.number}</span>
