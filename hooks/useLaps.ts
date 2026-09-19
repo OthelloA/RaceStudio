@@ -1,9 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Lap } from "@/lib/domain/types";
 
-export function useLaps(sessionKey: number, driverNumber?: number) {
+export function useLaps(
+  sessionKey: number,
+  driverNumber?: number,
+  enabled = true
+) {
   return useQuery({
     queryKey: ["laps", sessionKey, driverNumber],
+    enabled,
     queryFn: async (): Promise<Lap[]> => {
       const url = driverNumber
         ? `/api/sessions/${sessionKey}/laps?driver=${driverNumber}`

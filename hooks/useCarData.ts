@@ -1,9 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { CarDataFrame } from "@/lib/domain/types";
 
-export function useCarData(sessionKey: number, driverNumber: number) {
+export function useCarData(
+  sessionKey: number,
+  driverNumber: number,
+  enabled = true
+) {
   return useQuery({
     queryKey: ["carData", sessionKey, driverNumber],
+    enabled,
     queryFn: async (): Promise<CarDataFrame[]> => {
       const res = await fetch(
         `/api/sessions/${sessionKey}/car-data?driver=${driverNumber}`

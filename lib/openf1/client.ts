@@ -2,6 +2,10 @@ const BASE_URL = "https://api.openf1.org/v1";
 
 type QueryParams = Record<string, string | number | boolean | undefined>;
 
+interface FetchOpenF1Options {
+  cache?: RequestCache;
+}
+
 function buildQueryString(params: QueryParams): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -19,14 +23,16 @@ function sleep(ms: number): Promise<void> {
 
 export async function fetchOpenF1<T>(
   path: string,
-  params: QueryParams = {}
+  params: QueryParams = {},
+  options: FetchOpenF1Options = {}
 ): Promise<T> {
   const url = `${BASE_URL}${path}${buildQueryString(params)}`;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const res = await fetch(url, {
-      // Historical OpenF1 data never changes once a session has ended.
-      cache: "force-cache",
+      // Historical OpenF1 data never changes once a session has ended, but
+      // high-volume endpoints can exceed Next's 2MB data-cache item limit.
+      cache: options.cache ?? "force-cache",
     });
 
     if (res.ok) return res.json() as Promise<T>;

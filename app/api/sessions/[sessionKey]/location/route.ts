@@ -28,10 +28,18 @@ export async function GET(
     );
   }
 
-  const raw = await fetchOpenF1<OpenF1Location[]>("/location", {
-    session_key: sessionKey,
-    driver_number: driverNumber,
-  });
+  const raw = await fetchOpenF1<OpenF1Location[]>(
+    "/location",
+    {
+      session_key: sessionKey,
+      driver_number: driverNumber,
+    },
+    {
+      // Full-race location payloads are often 5MB+ per driver, which exceeds
+      // Next's per-item data-cache limit and produces noisy cache failures.
+      cache: "no-store",
+    }
+  );
 
   const sessionEpochMs = Date.parse(session.startTimeUtc);
   const frames = raw.map((frame) => normalizeLocation(frame, sessionEpochMs));

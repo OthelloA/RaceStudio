@@ -1,48 +1,48 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
-import type { Driver } from "@/lib/domain/types";
+import type { Driver, Session } from "@/lib/domain/types";
 import { useLocationData } from "@/hooks/useLocationData";
 import { useLocationDataForDrivers } from "@/hooks/useLocationDataForDrivers";
 import { useLaps } from "@/hooks/useLaps";
+import { useCircuitMap } from "@/hooks/useCircuitMap";
+import { CanonicalCircuitOutline } from "./CanonicalCircuitOutline";
 import { CircuitOutline } from "./CircuitOutline";
 import { CarLayer } from "./CarLayer";
+import { TrackReplay3D } from "./TrackReplay3D";
 import { Spinner } from "@/components/ui/Spinner";
 
-const WIDTH = 600;
-const HEIGHT = 600;
+const WIDTH = 540;
+const HEIGHT = 420;
 const PADDING = 20;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 8;
 
 export function TrackReplay({
+  session,
   sessionKey,
   drivers,
 }: {
+  session: Session;
   sessionKey: number;
   drivers: Driver[];
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [transform, setTransform] = useState(d3.zoomIdentity);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const zoom = d3
-      .zoom<HTMLDivElement, unknown>()
-      .scaleExtent([MIN_ZOOM, MAX_ZOOM])
-      .on("zoom", (event) => setTransform(event.transform));
-
-    const selection = d3.select(container);
-    selection.call(zoom);
-    return () => {
-      selection.on(".zoom", null);
-    };
-  }, []);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+  const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
 
   const primaryDriver = drivers[0];
+  const { data: circuitFeature } = useCircuitMap(
+    session.circuitName,
+    session.countryName
+  );
   const {
     data: location,
     isLoading,
@@ -50,18 +50,25 @@ export function TrackReplay({
   } = useLocationData(sessionKey, primaryDriver.number);
   const { data: laps } = useLaps(sessionKey, primaryDriver.number);
 
-  const driverNumbers = useMemo(() => drivers.map((d) => d.number), [drivers]);
-  const locationQueries = useLocationDataForDrivers(sessionKey, driverNumbers);
-  const carLayerEntries = useMemo(
-    () =>
-      drivers
-        .map((driver, i) => ({ driver, series: locationQueries[i]?.data }))
-        .filter(
-          (entry): entry is { driver: Driver; series: NonNullable<typeof entry.series> } =>
-            entry.series !== undefined
-        ),
-    [drivers, locationQueries]
+  const secondaryDrivers = useMemo(
+    () => drivers.filter((driver) => driver.number !== primaryDriver.number),
+    [drivers, primaryDriver.number]
   );
+  const secondaryDriverNumbers = useMemo(
+    () => secondaryDrivers.map((driver) => driver.number),
+    [secondaryDrivers]
+  );
+  const locationQueries = useLocationDataForDrivers(sessionKey, secondaryDriverNumbers);
+  const carLayerEntries = useMemo(() => {
+    const entries: Array<{ driver: Driver; series: NonNullable<typeof location> }> = [];
+    if (location) entries.push({ driver: primaryDriver, series: location });
+
+    for (let i = 0; i < secondaryDrivers.length; i++) {
+      const series = locationQueries[i]?.data;
+      if (series) entries.push({ driver: secondaryDrivers[i], series });
+    }
+    return entries;
+  }, [location, primaryDriver, secondaryDrivers, locationQueries]);
 
   const scales = useMemo(() => {
     if (!location || location.length === 0) return null;
@@ -130,40 +137,184 @@ export function TrackReplay({
   if (!location || !scales)
     return <p className="text-sm text-zinc-500">No location data recorded for this driver.</p>;
 
+  function zoomAt(multiplier: number, centerX = WIDTH / 2, centerY = HEIGHT / 2) {
+    setTransform((current) => {
+      const nextK = Math.min(Math.max(current.k * multiplier, MIN_ZOOM), MAX_ZOOM);
+      const ratio = nextK / current.k;
+      return {
+        k: nextK,
+        x: centerX - (centerX - current.x) * ratio,
+        y: centerY - (centerY - current.y) * ratio,
+      };
+    });
+  }
+
+  function resetZoom() {
+    dragRef.current = null;
+    setTransform({ x: 0, y: 0, k: 1 });
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: transform.x,
+      originY: transform.y,
+    };
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setTransform((current) => ({
+      ...current,
+      x: drag.originX + event.clientX - drag.startX,
+      y: drag.originY + event.clientY - drag.startY,
+    }));
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+    }
+  }
+
+  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const centerX = ((event.clientX - rect.left) / rect.width) * WIDTH;
+    const centerY = ((event.clientY - rect.top) / rect.height) * HEIGHT;
+    zoomAt(event.deltaY < 0 ? 1.18 : 1 / 1.18, centerX, centerY);
+  }
+
   return (
     <div
-      ref={containerRef}
-      className="relative w-full max-w-2xl touch-none overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800"
+      className="relative mx-auto w-full max-w-2xl touch-none overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950"
       style={{ aspectRatio: `${WIDTH} / ${HEIGHT}` }}
     >
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="absolute left-0 top-0 h-full w-full">
-        <g transform={transform.toString()}>
-          {pitLanePoints.length > 0 && (
-            <CircuitOutline
-              points={pitLanePoints}
-              xScale={scales.xScale}
-              yScale={scales.yScale}
-              dashed
-            />
-          )}
-          <CircuitOutline
-            points={outlinePoints}
+      {viewMode === "3d" ? (
+        <TrackReplay3D outlinePoints={outlinePoints} entries={carLayerEntries} />
+      ) : (
+        <>
+          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="absolute left-0 top-0 h-full w-full">
+            <defs>
+              <pattern id="track-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 24 0 L 0 0 0 24"
+                  fill="none"
+                  className="stroke-zinc-200 dark:stroke-zinc-800"
+                  strokeWidth="1"
+                />
+              </pattern>
+              <pattern id="track-grid-major" width="96" height="96" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 96 0 L 0 0 0 96"
+                  fill="none"
+                  className="stroke-zinc-300 dark:stroke-zinc-700"
+                  strokeWidth="1"
+                />
+              </pattern>
+            </defs>
+            <rect width={WIDTH} height={HEIGHT} fill="url(#track-grid)" opacity={0.55} />
+            <rect width={WIDTH} height={HEIGHT} fill="url(#track-grid-major)" opacity={0.35} />
+            <g transform={`translate(${transform.x} ${transform.y}) scale(${transform.k})`}>
+              {pitLanePoints.length > 0 && (
+                <CircuitOutline
+                  points={pitLanePoints}
+                  xScale={scales.xScale}
+                  yScale={scales.yScale}
+                  dashed
+                />
+              )}
+              <CanonicalCircuitOutline
+                feature={circuitFeature}
+                referencePoints={outlinePoints}
+                xScale={scales.xScale}
+                yScale={scales.yScale}
+              />
+              <CircuitOutline
+                points={outlinePoints}
+                xScale={scales.xScale}
+                yScale={scales.yScale}
+              />
+            </g>
+          </svg>
+          <CarLayer
+            entries={carLayerEntries}
             xScale={scales.xScale}
             yScale={scales.yScale}
+            width={WIDTH}
+            height={HEIGHT}
+            transform={transform}
           />
-        </g>
-      </svg>
-      <CarLayer
-        entries={carLayerEntries}
-        xScale={scales.xScale}
-        yScale={scales.yScale}
-        width={WIDTH}
-        height={HEIGHT}
-        transform={transform}
-      />
-      <div className="pointer-events-none absolute bottom-2 right-2 rounded bg-zinc-900/70 px-2 py-1 text-[10px] text-white">
-        Scroll to zoom · drag to pan
+          <div
+            className="absolute inset-0 z-[5] cursor-grab active:cursor-grabbing"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onWheel={handleWheel}
+          />
+        </>
+      )}
+      <div className="absolute left-3 top-3 z-10 flex overflow-hidden rounded-lg border border-zinc-200 bg-white/90 text-sm shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/90">
+        <button
+          type="button"
+          onClick={() => setViewMode("2d")}
+          className={`px-3 py-1.5 ${
+            viewMode === "2d"
+              ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
+              : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }`}
+        >
+          2D
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("3d")}
+          className={`border-l border-zinc-200 px-3 py-1.5 dark:border-zinc-700 ${
+            viewMode === "3d"
+              ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
+              : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }`}
+        >
+          3D
+        </button>
       </div>
+      {viewMode === "2d" && (
+        <div className="absolute right-3 top-3 z-10 flex overflow-hidden rounded-lg border border-zinc-200 bg-white/90 text-sm shadow-sm backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/90">
+        <button
+          type="button"
+          onClick={() => zoomAt(1.35)}
+          className="px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => zoomAt(1 / 1.35)}
+          className="border-l border-zinc-200 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          aria-label="Zoom out"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          onClick={resetZoom}
+          className="border-l border-zinc-200 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          Reset
+        </button>
+        </div>
+      )}
+      {viewMode === "2d" && (
+        <div className="pointer-events-none absolute bottom-2 right-2 rounded bg-zinc-900/70 px-2 py-1 text-[10px] text-white">
+          Wheel/pinch to zoom · drag to pan · all cars shown
+        </div>
+      )}
     </div>
   );
 }

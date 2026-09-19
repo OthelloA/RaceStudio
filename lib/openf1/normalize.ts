@@ -6,6 +6,8 @@ import type {
   OpenF1PitStop,
   OpenF1Position,
   OpenF1Session,
+  OpenF1Stint,
+  OpenF1TeamRadio,
 } from "./types";
 import type {
   CarDataFrame,
@@ -15,6 +17,8 @@ import type {
   PitStop,
   PositionEntry,
   Session,
+  Stint,
+  TeamRadioMessage,
 } from "@/lib/domain/types";
 
 function toOffsetMs(date: string, epochMs: number): number {
@@ -114,5 +118,27 @@ export function normalizePitStop(
     lapNumber: raw.lap_number,
     startOffsetMs: toOffsetMs(raw.date, sessionEpochMs),
     pitDurationMs: raw.pit_duration !== null ? raw.pit_duration * 1000 : null,
+  };
+}
+
+export function normalizeTeamRadio(
+  raw: OpenF1TeamRadio,
+  sessionEpochMs: number
+): TeamRadioMessage {
+  return {
+    driverNumber: raw.driver_number,
+    startOffsetMs: toOffsetMs(raw.date, sessionEpochMs),
+    recordingUrl: raw.recording_url,
+  };
+}
+
+export function normalizeStint(raw: OpenF1Stint): Stint {
+  return {
+    driverNumber: raw.driver_number,
+    stintNumber: raw.stint_number,
+    lapStart: raw.lap_start,
+    lapEnd: raw.lap_end,
+    compound: raw.compound,
+    tyreAgeAtStart: raw.tyre_age_at_start,
   };
 }

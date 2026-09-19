@@ -83,3 +83,22 @@ export interface OpenF1PitStop {
   pit_duration: number | null;
   lane_duration: number | null;
 }
+
+export interface OpenF1TeamRadio {
+  date: string;
+  session_key: number;
+  meeting_key: number;
+  driver_number: number;
+  recording_url: string;
+}
+
+export interface OpenF1Stint {
+  meeting_key: number;
+  session_key: number;
+  driver_number: number;
+  stint_number: number;
+  lap_start: number;
+  lap_end: number | null;
+  compound: string;
+  tyre_age_at_start: number | null;
+}
