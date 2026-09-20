@@ -32,15 +32,40 @@ export function CircuitOutline({
     return line(sorted) ?? "";
   }, [points, xScale, yScale]);
 
+  if (dashed) {
+    return (
+      <path
+        d={pathD}
+        fill="none"
+        className="stroke-sky-400/70"
+        strokeWidth={2}
+        strokeDasharray="4 4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    );
+  }
+
   return (
-    <path
-      d={pathD}
-      fill="none"
-      stroke="currentColor"
-      className="text-zinc-400"
-      strokeWidth={dashed ? 1.5 : 2}
-      strokeDasharray={dashed ? "4 3" : undefined}
-      opacity={dashed ? 0.6 : 1}
-    />
+    <g>
+      <path
+        d={pathD}
+        fill="none"
+        className="stroke-zinc-400 dark:stroke-zinc-600"
+        strokeWidth={10}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d={pathD}
+        fill="none"
+        className="stroke-zinc-500 dark:stroke-zinc-500"
+        strokeWidth={1.5}
+        strokeDasharray="6 8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={0.85}
+      />
+    </g>
   );
 }

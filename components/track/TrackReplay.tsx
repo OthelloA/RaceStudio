@@ -2,16 +2,12 @@
 
 import { useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
-import type { Driver, Session } from "@/lib/domain/types";
-import { useLocationData } from "@/hooks/useLocationData";
+import type { Driver, LocationFrame } from "@/lib/domain/types";
 import { useLocationDataForDrivers } from "@/hooks/useLocationDataForDrivers";
 import { useLaps } from "@/hooks/useLaps";
-import { useCircuitMap } from "@/hooks/useCircuitMap";
-import { CanonicalCircuitOutline } from "./CanonicalCircuitOutline";
 import { CircuitOutline } from "./CircuitOutline";
 import { CarLayer } from "./CarLayer";
 import { TrackReplay3D } from "./TrackReplay3D";
-import { Spinner } from "@/components/ui/Spinner";
 
 const WIDTH = 540;
 const HEIGHT = 420;
@@ -20,13 +16,13 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 8;
 
 export function TrackReplay({
-  session,
   sessionKey,
   drivers,
+  primaryLocation,
 }: {
-  session: Session;
   sessionKey: number;
   drivers: Driver[];
+  primaryLocation: LocationFrame[];
 }) {
   const dragRef = useRef<{
     pointerId: number;
@@ -39,15 +35,7 @@ export function TrackReplay({
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
 
   const primaryDriver = drivers[0];
-  const { data: circuitFeature } = useCircuitMap(
-    session.circuitName,
-    session.countryName
-  );
-  const {
-    data: location,
-    isLoading,
-    isError,
-  } = useLocationData(sessionKey, primaryDriver.number);
+  const location = primaryLocation;
   const { data: laps } = useLaps(sessionKey, primaryDriver.number);
 
   const secondaryDrivers = useMemo(
@@ -127,13 +115,6 @@ export function TrackReplay({
     );
   }, [location, laps]);
 
-  if (isLoading)
-    return (
-      <p className="flex items-center gap-2 text-sm text-zinc-500">
-        <Spinner /> Loading track…
-      </p>
-    );
-  if (isError) return <p className="text-sm text-red-600">Failed to load track data.</p>;
   if (!location || !scales)
     return <p className="text-sm text-zinc-500">No location data recorded for this driver.</p>;
 
@@ -228,12 +209,6 @@ export function TrackReplay({
                   dashed
                 />
               )}
-              <CanonicalCircuitOutline
-                feature={circuitFeature}
-                referencePoints={outlinePoints}
-                xScale={scales.xScale}
-                yScale={scales.yScale}
-              />
               <CircuitOutline
                 points={outlinePoints}
                 xScale={scales.xScale}

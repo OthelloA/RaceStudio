@@ -90,10 +90,10 @@ export function TelemetryPanel({
     return <p className="text-sm text-zinc-500">No telemetry recorded for selected drivers.</p>;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+    <div className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-inner">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
             Telemetry comparison
           </h2>
           {telemetrySeries.map(({ driver }) => (
@@ -131,8 +131,8 @@ export function TelemetryPanel({
               onClick={() => toggleField(channel.field)}
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 selected
-                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
-                  : "border-zinc-300 text-zinc-500 hover:border-zinc-500 dark:border-zinc-700"
+                  ? "border-red-400 bg-red-500 text-white shadow-lg shadow-red-500/20"
+                  : "border-white/10 text-zinc-500 hover:border-white/25 hover:text-zinc-300"
               }`}
             >
               {channel.label}

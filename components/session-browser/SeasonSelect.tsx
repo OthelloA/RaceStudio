@@ -18,7 +18,7 @@ export function SeasonSelect({
     <label className="flex flex-col gap-1 text-sm">
       <span className="text-zinc-500">Season</span>
       <select
-        className="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+        className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-zinc-100 focus:border-red-400 focus:outline-none"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >

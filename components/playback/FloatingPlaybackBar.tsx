@@ -46,26 +46,26 @@ export function FloatingPlaybackBar({
   }, [laps, currentTimeMs]);
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-zinc-200 bg-white/85 p-3 shadow-sm backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/85">
+    <div className="flex w-full flex-col gap-2 rounded-2xl border border-white/10 bg-zinc-950/80 p-3 shadow-xl backdrop-blur-md">
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => (isPlaying ? pause() : play())}
-          className="rounded bg-zinc-900 px-3 py-1 text-sm text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="rounded-lg bg-red-500 px-3 py-1 text-sm font-bold text-white hover:bg-red-400"
         >
           {isPlaying ? "Pause" : "Play"}
         </button>
         <button
           type="button"
           onClick={() => seek(startOffsetMs)}
-          className="rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-700"
+          className="rounded-lg border border-white/10 px-3 py-1 text-sm text-zinc-300 hover:bg-white/10"
         >
           Reset
         </button>
         <select
           value={playbackSpeed}
           onChange={(e) => setSpeed(Number(e.target.value))}
-          className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-zinc-100"
         >
           {SPEEDS.map((speed) => (
             <option key={speed} value={speed}>
@@ -73,10 +73,10 @@ export function FloatingPlaybackBar({
             </option>
           ))}
         </select>
-        <span className="rounded bg-zinc-100 px-2 py-1 font-mono text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+        <span className="rounded-lg bg-white/10 px-2 py-1 font-mono text-sm text-zinc-300">
           {formatElapsed(elapsedMs)}
         </span>
-        <span className="rounded bg-zinc-900 px-2 py-1 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+        <span className="rounded-lg bg-zinc-100 px-2 py-1 text-sm font-bold text-zinc-950">
           Lap {currentLap?.lapNumber ?? "—"}
         </span>
       </div>

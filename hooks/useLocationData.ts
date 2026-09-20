@@ -1,9 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LocationFrame } from "@/lib/domain/types";
 
-export function useLocationData(sessionKey: number, driverNumber: number) {
+export function useLocationData(
+  sessionKey: number,
+  driverNumber: number,
+  enabled = true
+) {
   return useQuery({
     queryKey: ["location", sessionKey, driverNumber],
+    enabled,
     queryFn: async (): Promise<LocationFrame[]> => {
       const res = await fetch(
         `/api/sessions/${sessionKey}/location?driver=${driverNumber}`

@@ -34,7 +34,7 @@ function perpendicularDistance(point: Point3, start: Point3, end: Point3): numbe
   return Math.hypot(point[0] - projectedX, point[2] - projectedZ);
 }
 
-function simplifyTrackPoints(points: Point3[], tolerance = 0.035): Point3[] {
+function simplifyTrackPoints(points: Point3[], tolerance = 0.01): Point3[] {
   if (points.length <= 3) return points;
 
   let maxDistance = 0;
@@ -55,6 +55,33 @@ function simplifyTrackPoints(points: Point3[], tolerance = 0.035): Point3[] {
   const left = simplifyTrackPoints(points.slice(0, maxIndex + 1), tolerance);
   const right = simplifyTrackPoints(points.slice(maxIndex), tolerance);
   return [...left.slice(0, -1), ...right];
+}
+
+function smoothTrackPoints(points: Point3[], radius = 4): Point3[] {
+  if (points.length <= radius * 2 + 1) return points;
+
+  return points.map((point, index) => {
+    let count = 0;
+    const sum: Point3 = [0, 0, 0];
+
+    for (let offset = -radius; offset <= radius; offset++) {
+      const sample = points[Math.min(Math.max(index + offset, 0), points.length - 1)];
+      sum[0] += sample[0];
+      sum[1] += sample[1];
+      sum[2] += sample[2];
+      count++;
+    }
+
+    // Keep the endpoints anchored so the lap does not visibly shrink/open.
+    if (index === 0 || index === points.length - 1) return point;
+    return [sum[0] / count, sum[1] / count, sum[2] / count];
+  });
+}
+
+function capPointCount(points: Point3[], maxPoints = 900): Point3[] {
+  if (points.length <= maxPoints) return points;
+  const step = (points.length - 1) / (maxPoints - 1);
+  return Array.from({ length: maxPoints }, (_, index) => points[Math.round(index * step)]);
 }
 
 function buildNormalizer(points: LocationFrame[]): Normalizer {
@@ -154,7 +181,9 @@ export function TrackReplay3D({
   const normalizer = useMemo(() => buildNormalizer(outlinePoints), [outlinePoints]);
   const trackPoints = useMemo(() => {
     const normalized = outlinePoints.map((point) => normalizer.toPoint(point));
-    return simplifyTrackPoints(normalized);
+    const smoothed = smoothTrackPoints(normalized);
+    const lightlySimplified = simplifyTrackPoints(smoothed);
+    return capPointCount(lightlySimplified);
   }, [outlinePoints, normalizer]);
 
   return (

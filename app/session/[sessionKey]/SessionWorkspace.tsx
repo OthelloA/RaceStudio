@@ -5,6 +5,7 @@ import { useSession } from "@/hooks/useSessionData";
 import { useDrivers } from "@/hooks/useDrivers";
 import { useCarData } from "@/hooks/useCarData";
 import { useLaps } from "@/hooks/useLaps";
+import { useLocationData } from "@/hooks/useLocationData";
 import { usePlaybackStore } from "@/stores/playbackStore";
 import { usePlaybackClockDriver } from "@/hooks/usePlaybackClockDriver";
 import { findActiveDataRange } from "@/lib/time/sessionClock";
@@ -12,25 +13,38 @@ import Link from "next/link";
 import { FloatingPlaybackBar } from "@/components/playback/FloatingPlaybackBar";
 import { TelemetryPanel } from "@/components/telemetry/TelemetryPanel";
 import { TrackReplay } from "@/components/track/TrackReplay";
+import { TrackLoadingSkeleton } from "@/components/track/TrackLoadingSkeleton";
 import { DriverPanel } from "@/components/driver-panel/DriverPanel";
 import { DriverSidebar } from "@/components/driver-panel/DriverSidebar";
 import { RaceContextPanel } from "@/components/race-context/RaceContextPanel";
-import { Spinner } from "@/components/ui/Spinner";
 
 export function SessionWorkspace({ sessionKey }: { sessionKey: number }) {
   usePlaybackClockDriver();
 
-  const { data: session, isError: sessionError } = useSession(sessionKey);
-  const { data: drivers, isError: driversError } = useDrivers(sessionKey);
+  const {
+    data: session,
+    isError: sessionError,
+    isLoading: isSessionLoading,
+  } = useSession(sessionKey);
+  const {
+    data: drivers,
+    isError: driversError,
+    isLoading: isDriversLoading,
+  } = useDrivers(sessionKey);
   const primaryDriverNumber = drivers?.[0]?.number;
-  const { data: primaryCarData } = useCarData(
+  const { data: primaryCarData, isLoading: isPrimaryCarDataLoading } = useCarData(
     sessionKey,
     primaryDriverNumber ?? 0,
     primaryDriverNumber !== undefined
   );
-  const { data: primaryLaps } = useLaps(
+  const { data: primaryLaps, isLoading: isPrimaryLapsLoading } = useLaps(
     sessionKey,
     primaryDriverNumber,
+    primaryDriverNumber !== undefined
+  );
+  const { data: primaryLocation, isLoading: isPrimaryLocationLoading } = useLocationData(
+    sessionKey,
+    primaryDriverNumber ?? 0,
     primaryDriverNumber !== undefined
   );
   const loadSession = usePlaybackStore((s) => s.loadSession);
@@ -84,18 +98,22 @@ export function SessionWorkspace({ sessionKey }: { sessionKey: number }) {
     );
   }
 
-  if (!session || !drivers || drivers.length === 0 || !dataRange) {
+  if (!session || !drivers || drivers.length === 0 || !dataRange || !primaryLocation) {
     return (
-      <p className="flex items-center gap-2 text-sm text-zinc-500">
-        <Spinner /> Loading session…
-      </p>
+      <TrackLoadingSkeleton
+        sessionLoaded={!isSessionLoading && session !== undefined}
+        driversLoaded={!isDriversLoading && drivers !== undefined && drivers.length > 0}
+        telemetryLoaded={!isPrimaryCarDataLoading && primaryCarData !== undefined}
+        lapsLoaded={!isPrimaryLapsLoading && primaryLaps !== undefined}
+        mapLoaded={!isPrimaryLocationLoading && primaryLocation !== undefined}
+      />
     );
   }
 
   const focusedDrivers = drivers.filter((d) => activeDriverNumbers.includes(d.number));
 
   return (
-    <div className="relative flex h-screen w-full overflow-hidden">
+    <div className="relative flex h-screen w-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.16),transparent_34%),linear-gradient(135deg,#09090b_0%,#18181b_55%,#030712_100%)] text-zinc-100">
       <div
         className={`absolute inset-0 z-30 flex justify-end transition ${
           isDriverDrawerOpen ? "pointer-events-auto" : "pointer-events-none"
@@ -129,10 +147,10 @@ export function SessionWorkspace({ sessionKey }: { sessionKey: number }) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+        <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-white/10 bg-zinc-950/75 px-4 py-2 backdrop-blur">
           <Link
             href="/"
-            className="justify-self-start text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="justify-self-start text-sm text-zinc-500 hover:text-zinc-100"
           >
             ← Sessions
           </Link>
@@ -145,19 +163,23 @@ export function SessionWorkspace({ sessionKey }: { sessionKey: number }) {
           <button
             type="button"
             onClick={() => setIsDriverDrawerOpen(true)}
-            className="shrink-0 justify-self-end rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="shrink-0 justify-self-end rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-bold hover:bg-white/10"
           >
             Drivers
           </button>
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-4 pb-4 [scrollbar-color:#71717a_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 [&::-webkit-scrollbar-track]:bg-transparent lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.15fr)] lg:grid-rows-[minmax(580px,1fr)_auto]">
-          <section className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-3 overflow-hidden rounded-xl bg-zinc-50/60 p-3 dark:bg-zinc-950/40">
-            <TrackReplay session={session} sessionKey={sessionKey} drivers={drivers} />
+          <section className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 p-3 shadow-2xl backdrop-blur">
+            <TrackReplay
+              sessionKey={sessionKey}
+              drivers={drivers}
+              primaryLocation={primaryLocation}
+            />
             <FloatingPlaybackBar sessionKey={sessionKey} driverNumber={drivers[0].number} />
           </section>
 
-          <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-4 [scrollbar-color:#71717a_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 [&::-webkit-scrollbar-track]:bg-transparent dark:border-zinc-800 dark:bg-zinc-950">
+          <aside className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950/75 p-4 shadow-2xl backdrop-blur [scrollbar-color:#71717a_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-500 [&::-webkit-scrollbar-track]:bg-transparent">
             {focusedDrivers.length > 0 && (
               <div className="grid gap-3 sm:grid-cols-2">
                 {focusedDrivers.map((driver) => (
