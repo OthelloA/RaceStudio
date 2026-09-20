@@ -185,7 +185,6 @@ export function SessionBrowser() {
       moved: false,
     };
     setIsDragging(true);
-    carousel.setPointerCapture(event.pointerId);
   };
 
   const handleCarouselPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -201,17 +200,13 @@ export function SessionBrowser() {
     carousel.scrollLeft = drag.scrollLeft - deltaX;
   };
 
-  const stopCarouselDrag = (event: PointerEvent<HTMLDivElement>) => {
-    const carousel = carouselRef.current;
+  const stopCarouselDrag = () => {
     const drag = dragStateRef.current;
     if (!drag.isDown) return;
 
     drag.isDown = false;
     setIsDragging(false);
     if (drag.moved) suppressClickRef.current = true;
-    if (carousel?.hasPointerCapture(event.pointerId)) {
-      carousel.releasePointerCapture(event.pointerId);
-    }
   };
 
   return (

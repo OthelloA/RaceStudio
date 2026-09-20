@@ -46,17 +46,20 @@ export function TrackReplay({
     () => secondaryDrivers.map((driver) => driver.number),
     [secondaryDrivers]
   );
-  const locationQueries = useLocationDataForDrivers(sessionKey, secondaryDriverNumbers);
+  const { data: secondaryLocationByDriver } = useLocationDataForDrivers(
+    sessionKey,
+    secondaryDriverNumbers
+  );
   const carLayerEntries = useMemo(() => {
     const entries: Array<{ driver: Driver; series: NonNullable<typeof location> }> = [];
     if (location) entries.push({ driver: primaryDriver, series: location });
 
-    for (let i = 0; i < secondaryDrivers.length; i++) {
-      const series = locationQueries[i]?.data;
-      if (series) entries.push({ driver: secondaryDrivers[i], series });
+    for (const driver of secondaryDrivers) {
+      const series = secondaryLocationByDriver?.[driver.number];
+      if (series && series.length > 0) entries.push({ driver, series });
     }
     return entries;
-  }, [location, primaryDriver, secondaryDrivers, locationQueries]);
+  }, [location, primaryDriver, secondaryDrivers, secondaryLocationByDriver]);
 
   const scales = useMemo(() => {
     if (!location || location.length === 0) return null;

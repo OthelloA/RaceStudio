@@ -1,11 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
+
 interface TrackLoadingSkeletonProps {
   sessionLoaded: boolean;
   driversLoaded: boolean;
   telemetryLoaded: boolean;
   lapsLoaded: boolean;
   mapLoaded: boolean;
+  driverNames?: string[];
 }
 
 const STEPS = [
@@ -25,11 +28,33 @@ export function TrackLoadingSkeleton({
   telemetryLoaded,
   lapsLoaded,
   mapLoaded,
+  driverNames = [],
 }: TrackLoadingSkeletonProps) {
   const state = { sessionLoaded, driversLoaded, telemetryLoaded, lapsLoaded, mapLoaded };
   const completed = STEPS.filter((step) => state[step.key]).length;
   const progress = completed / STEPS.length;
   const dashOffset = 1400 * (1 - progress);
+  const loadingMessage = useMemo(() => {
+    const fallback = [
+      "Rolling cars out of the garage…",
+      "Warming tyres in the pit lane…",
+      "Syncing timing loops…",
+      "Race Control is lighting up…",
+      "Building the circuit trace…",
+    ];
+    const driverActions = [
+      "rolling out of the garage…",
+      "warming the tyres…",
+      "checking radio…",
+      "crossing sector one…",
+      "loading purple sectors…",
+      "waiting at pit exit…",
+    ];
+    const source = driverNames.length > 0
+      ? driverNames.map((name, index) => `${name} ${driverActions[index % driverActions.length]}`)
+      : fallback;
+    return source[completed % source.length];
+  }, [completed, driverNames]);
 
   return (
     <div className="flex min-h-[520px] w-full items-center justify-center p-6">
@@ -38,6 +63,7 @@ export function TrackLoadingSkeleton({
           <div>
             <h2 className="text-lg font-semibold">Preparing replay</h2>
             <p className="text-sm text-zinc-500">Building the session map, timing, and telemetry streams.</p>
+            <p className="mt-2 font-mono text-xs uppercase tracking-wide text-[var(--team-theme)]">{loadingMessage}</p>
           </div>
           <div className="font-mono text-sm text-zinc-500">{Math.round(progress * 100)}%</div>
         </div>
@@ -68,7 +94,7 @@ export function TrackLoadingSkeleton({
             <path
               d={TRACK_PATH}
               fill="none"
-              stroke="#ef4444"
+              stroke="var(--team-theme)"
               strokeWidth="10"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -77,13 +103,23 @@ export function TrackLoadingSkeleton({
               filter="url(#loading-glow)"
               className="transition-all duration-700 ease-out"
             />
-            <circle r="7" fill="#ef4444" filter="url(#loading-glow)">
+            <circle r="7" fill="var(--team-theme)" filter="url(#loading-glow)">
               <animateMotion dur="2.4s" repeatCount="indefinite" path={TRACK_PATH} />
             </circle>
           </svg>
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        {driverNames.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {driverNames.slice(0, 8).map((name) => (
+              <span key={name} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-zinc-400">
+                {name} loaded
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-5">
           {STEPS.map((step) => {
             const done = state[step.key];
             return (

@@ -106,6 +106,7 @@ export function SessionWorkspace({ sessionKey }: { sessionKey: number }) {
         telemetryLoaded={!isPrimaryCarDataLoading && primaryCarData !== undefined}
         lapsLoaded={!isPrimaryLapsLoading && primaryLaps !== undefined}
         mapLoaded={!isPrimaryLocationLoading && primaryLocation !== undefined}
+        driverNames={drivers?.map((driver) => driver.nameAcronym || driver.fullName) ?? []}
       />
     );
   }
@@ -113,7 +114,7 @@ export function SessionWorkspace({ sessionKey }: { sessionKey: number }) {
   const focusedDrivers = drivers.filter((d) => activeDriverNumbers.includes(d.number));
 
   return (
-    <div className="relative flex h-screen w-full overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(239,68,68,0.16),transparent_34%),linear-gradient(135deg,#09090b_0%,#18181b_55%,#030712_100%)] text-zinc-100">
+    <div className="relative flex h-screen w-full overflow-hidden bg-[radial-gradient(circle_at_top_left,var(--team-theme-glow),transparent_34%),linear-gradient(135deg,#09090b_0%,#18181b_55%,#030712_100%)] text-zinc-100">
       <div
         className={`absolute inset-0 z-30 flex justify-end transition ${
           isDriverDrawerOpen ? "pointer-events-auto" : "pointer-events-none"

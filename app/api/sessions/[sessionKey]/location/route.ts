@@ -28,21 +28,34 @@ export async function GET(
     );
   }
 
-  const raw = await fetchOpenF1<OpenF1Location[]>(
-    "/location",
-    {
-      session_key: sessionKey,
-      driver_number: driverNumber,
-    },
-    {
-      // Full-race location payloads are often 5MB+ per driver, which exceeds
-      // Next's per-item data-cache limit and produces noisy cache failures.
-      cache: "no-store",
+  try {
+    const raw = await fetchOpenF1<OpenF1Location[]>(
+      "/location",
+      {
+        session_key: sessionKey,
+        driver_number: driverNumber,
+      },
+      {
+        // Full-race location payloads are often 5MB+ per driver, which exceeds
+        // Next's per-item data-cache limit and produces noisy cache failures.
+        cache: "no-store",
+      }
+    );
+
+    const sessionEpochMs = Date.parse(session.startTimeUtc);
+    const frames = raw.map((frame) => normalizeLocation(frame, sessionEpochMs));
+
+    return Response.json(frames);
+  } catch (error) {
+    // OpenF1 returns 404/422 when location telemetry is unavailable for a
+    // specific driver/session. Treat that as an empty stream so one missing car
+    // does not break the replay or spam route failures.
+    if (
+      error instanceof Error &&
+      (error.message.includes("(404)") || error.message.includes("(422)"))
+    ) {
+      return Response.json([]);
     }
-  );
-
-  const sessionEpochMs = Date.parse(session.startTimeUtc);
-  const frames = raw.map((frame) => normalizeLocation(frame, sessionEpochMs));
-
-  return Response.json(frames);
+    throw error;
+  }
 }
