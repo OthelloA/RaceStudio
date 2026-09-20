@@ -9,6 +9,7 @@ export function useLaps(
   return useQuery({
     queryKey: ["laps", sessionKey, driverNumber],
     enabled,
+    retry: false,
     queryFn: async (): Promise<Lap[]> => {
       const url = driverNumber
         ? `/api/sessions/${sessionKey}/laps?driver=${driverNumber}`

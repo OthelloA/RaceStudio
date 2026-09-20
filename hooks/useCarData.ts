@@ -9,6 +9,7 @@ export function useCarData(
   return useQuery({
     queryKey: ["carData", sessionKey, driverNumber],
     enabled,
+    retry: false,
     queryFn: async (): Promise<CarDataFrame[]> => {
       const res = await fetch(
         `/api/sessions/${sessionKey}/car-data?driver=${driverNumber}`

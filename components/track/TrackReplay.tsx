@@ -46,10 +46,13 @@ export function TrackReplay({
     () => secondaryDrivers.map((driver) => driver.number),
     [secondaryDrivers]
   );
-  const { data: secondaryLocationByDriver } = useLocationDataForDrivers(
-    sessionKey,
-    secondaryDriverNumbers
-  );
+  const {
+    data: secondaryLocationByDriver,
+    latestEvent: latestLocationEvent,
+    loadedCount: loadedLocationCount,
+    totalCount: totalLocationCount,
+    isLoading: isLoadingSecondaryLocations,
+  } = useLocationDataForDrivers(sessionKey, secondaryDriverNumbers);
   const carLayerEntries = useMemo(() => {
     const entries: Array<{ driver: Driver; series: NonNullable<typeof location> }> = [];
     if (location) entries.push({ driver: primaryDriver, series: location });
@@ -286,6 +289,26 @@ export function TrackReplay({
         >
           Reset
         </button>
+        </div>
+      )}
+      {viewMode === "2d" && totalLocationCount > 0 && (
+        <div className="pointer-events-none absolute left-3 top-14 z-10 rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-2 text-xs text-zinc-300 shadow-xl backdrop-blur">
+          <div className="font-mono uppercase tracking-wide text-[var(--team-theme)]">
+            Driver feeds {loadedLocationCount}/{totalLocationCount}
+          </div>
+          <div className="mt-1 text-zinc-500">
+            {latestLocationEvent
+              ? `#${latestLocationEvent.driverNumber} ${
+                  latestLocationEvent.status === "loaded"
+                    ? "telemetry online"
+                    : latestLocationEvent.status === "missing"
+                      ? "signal unavailable"
+                      : "feed error"
+                }`
+              : isLoadingSecondaryLocations
+                ? "Queueing location streams…"
+                : "All feeds processed"}
+          </div>
         </div>
       )}
       {viewMode === "2d" && (

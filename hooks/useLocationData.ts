@@ -9,6 +9,7 @@ export function useLocationData(
   return useQuery({
     queryKey: ["location", sessionKey, driverNumber],
     enabled,
+    retry: false,
     queryFn: async (): Promise<LocationFrame[]> => {
       const res = await fetch(
         `/api/sessions/${sessionKey}/location?driver=${driverNumber}`

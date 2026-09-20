@@ -28,13 +28,26 @@ export async function GET(
     );
   }
 
-  const raw = await fetchOpenF1<OpenF1CarData[]>("/car_data", {
-    session_key: sessionKey,
-    driver_number: driverNumber,
-  });
+  try {
+    const raw = await fetchOpenF1<OpenF1CarData[]>("/car_data", {
+      session_key: sessionKey,
+      driver_number: driverNumber,
+    });
 
-  const sessionEpochMs = Date.parse(session.startTimeUtc);
-  const frames = raw.map((frame) => normalizeCarData(frame, sessionEpochMs));
+    const sessionEpochMs = Date.parse(session.startTimeUtc);
+    const frames = raw.map((frame) => normalizeCarData(frame, sessionEpochMs));
 
-  return Response.json(frames);
+    return Response.json(frames);
+  } catch (error) {
+    // OpenF1 returns 404/422 when telemetry is unavailable for a driver/session.
+    // Treat that as an empty stream so the staging screen can continue instead
+    // of retrying forever behind a 500.
+    if (
+      error instanceof Error &&
+      (error.message.includes("(404)") || error.message.includes("(422)"))
+    ) {
+      return Response.json([]);
+    }
+    throw error;
+  }
 }

@@ -8,10 +8,20 @@ export async function GET(
 ) {
   const { sessionKey } = await params;
 
-  const raw = await fetchOpenF1<OpenF1Driver[]>("/drivers", {
-    session_key: sessionKey,
-  });
-  const drivers = raw.map(normalizeDriver);
+  try {
+    const raw = await fetchOpenF1<OpenF1Driver[]>("/drivers", {
+      session_key: sessionKey,
+    });
+    const drivers = raw.map(normalizeDriver);
 
-  return Response.json(drivers);
+    return Response.json(drivers);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("(429)")) {
+      return Response.json(
+        { error: "OpenF1 rate limit hit while loading drivers. Please retry shortly." },
+        { status: 503, headers: { "Retry-After": "10" } }
+      );
+    }
+    throw error;
+  }
 }
