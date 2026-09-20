@@ -56,7 +56,7 @@ function candidates(feature: CircuitFeature): string[] {
   return [name, location, ...(CIRCUIT_ALIASES[name] ?? []).map(normalizeName)];
 }
 
-function findCircuit(
+export function findCircuit(
   features: CircuitFeature[],
   circuitName: string,
   countryName: string
@@ -83,13 +83,25 @@ function findCircuit(
   );
 }
 
+async function fetchCircuitCollection(): Promise<CircuitCollection> {
+  const res = await fetch("/circuits/f1-circuits.geojson");
+  if (!res.ok) throw new Error("Failed to load circuit maps");
+  return (await res.json()) as CircuitCollection;
+}
+
+export function useCircuitMaps() {
+  return useQuery({
+    queryKey: ["circuit-maps"],
+    queryFn: fetchCircuitCollection,
+    staleTime: Infinity,
+  });
+}
+
 export function useCircuitMap(circuitName: string, countryName: string) {
   return useQuery({
     queryKey: ["circuit-map", circuitName, countryName],
     queryFn: async (): Promise<CircuitFeature | null> => {
-      const res = await fetch("/circuits/f1-circuits.geojson");
-      if (!res.ok) throw new Error("Failed to load circuit maps");
-      const collection = (await res.json()) as CircuitCollection;
+      const collection = await fetchCircuitCollection();
       return findCircuit(collection.features, circuitName, countryName);
     },
     staleTime: Infinity,
